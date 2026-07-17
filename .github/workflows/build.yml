@@ -5,29 +5,44 @@ on:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
-  workflow_dispatch: # 允许你在 GitHub 页面上点击按钮手动触发构建
+  workflow_dispatch: 
 
 jobs:
   build:
-    runs-on: windows-latest # 编译 Among Us 模组通常推荐在 Windows 环境下进行
+    runs-on: windows-latest 
 
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
 
-    - name: Setup .NET
+    # 核心：必须把 BepInEx 的官方私有包商店加进 GitHub 信任列表，否则绝对找不到 AmongUs.GameLibs
+    - name: Setup BepInEx NuGet Source
+      run: |
+        dotnet nuget add source https://nuget.bepinex.dev/v3/index.json -n bepinex --overwrite
+
+    # 安装 .NET 6.0（用于常规 Release 电脑版编译）
+    - name: Setup .NET 6.0
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '6.0.x' # 或者是你项目实际使用的 .NET 版本（如 6.0 或 7.0）
+        dotnet-version: '6.0.x'
 
+    # 安装 .NET 8.0（兼容项目中的 Android 条件分支）
+    - name: Setup .NET 8.0
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    # 还原依赖项（此时有了私有源，就能顺利把 GameLibs 拉下来了）
     - name: Restore Dependencies
       run: dotnet restore
 
+    # 核心：显式指定 Configuration 为 Release，不传入任何外部 AmongUs 路径，切断本地复制逻辑
     - name: Build Mod (Release)
       run: dotnet build --configuration Release --no-restore
 
+    # 将生成的 dll 文件打包上传到 GitHub Actions 附件中
     - name: Upload Build Artifact
       uses: actions/upload-artifact@v4
       with:
         name: AmongUsFilterMod-Plugin
-        path: bin/Release/**/AmongUsFilterMod.dll # 自动抓取编译生成的 dll 文件
+        path: bin/Release/net6.0/AmongUsFilterMod.dll # 顺着你的 net6.0 输出目录精准抓取
