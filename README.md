@@ -43,5 +43,5 @@
 
 ### Art ❤️ by [(UP主)這是名字awa](https://space.bilibili.com/3461580597496423) 
 
-### Bilibili ❤️ UP主 [芙酱awa](https://space.bilibili.com/1682798870) 
+### Bilibili ❤️ [（UP主）芙酱awa](https://space.bilibili.com/1682798870) 
 
