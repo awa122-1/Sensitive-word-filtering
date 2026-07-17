@@ -41,7 +41,7 @@
 
 ### Developed with ❤️ by [Tfujiang](https://github.com/awa122-1/Sensitive-word-filtering) 
 
-### Art by 這是名字awa [這是名字awa](https://space.bilibili.com/3461580597496423) 
+### Art ❤️ by [(UP主)這是名字awa](https://space.bilibili.com/3461580597496423) 
 
-### Bilibili Tfujiang [芙酱awa](https://space.bilibili.com/1682798870) 
+### Bilibili ❤️ UP主 [芙酱awa](https://space.bilibili.com/1682798870) 
 
