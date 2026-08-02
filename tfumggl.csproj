@@ -1,33 +1,49 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFramework Condition="'$(Configuration)' == 'Android'">net8.0</TargetFramework>
-        <TargetFramework Condition="'$(Configuration)' != 'Android'">net6.0</TargetFramework>
+        <TargetFramework>net6.0</TargetFramework>
         <LangVersion>latest</LangVersion>
         <DebugType>embedded</DebugType>
-        <Description>The ultimate Host-Only mod without Modded Protocol</Description>
-        <Authors>apemv</Authors>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-        <Configurations>Release;Android</Configurations>
-        <Configuration Condition="'$(Configuration)' == ''">Release</Configuration>
-    </PropertyGroup>
-
-    <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
-      <Configuration>Release</Configuration>
     </PropertyGroup>
 
     <ItemGroup>
+        <!-- 核心公共依赖 -->
         <PackageReference Include="BepInEx.Unity.IL2CPP" Version="6.0.0-be.735" ExcludeAssets="runtime;native" />
-
-        <PackageReference Include="AmongUs.GameLibs.Steam" Version="2026.6.5" PrivateAssets="all" Condition="'$(Configuration)' == 'Release'"/>
-        <PackageReference Include="AmongUs.GameLibs.Android" Version="2025.10.14" PrivateAssets="all" Condition="'$(Configuration)' == 'Android'"/>
-
         <PackageReference Include="BepInEx.AutoPlugin" Version="1.1.0" PrivateAssets="all" />
-        <PackageReference Include="BepInEx.IL2CPP.MSBuild" Version="2.1.0-rc.1" PrivateAssets="all" ExcludeAssets="runtime" />
-        
-		<EmbeddedResource Include=".\Resources\**" />
+        <!-- 在 .csproj 的 ItemGroup 标签里加上这一行 -->
+        <Reference Include="UnityEngine.InputLegacyModule">
+            <HintPath>libs\UnityEngine.InputLegacyModule.dll</HintPath>
+        </Reference>
+        <!-- 引入你本地 libs 文件夹里的所有核心 DLL -->
+        <Reference Include="Il2Cppmscorlib">
+            <HintPath>libs\Il2Cppmscorlib.dll</HintPath>
+        </Reference>
+        <Reference Include="UnityEngine">
+            <HintPath>libs\UnityEngine.dll</HintPath>
+        </Reference>
+        <Reference Include="UnityEngine.CoreModule">
+            <HintPath>libs\UnityEngine.CoreModule.dll</HintPath>
+        </Reference>
+        <Reference Include="UnityEngine.UI">
+            <HintPath>libs\UnityEngine.UI.dll</HintPath>
+        </Reference>
+        <Reference Include="UnityEngine.TextRenderingModule">
+            <HintPath>libs\UnityEngine.TextRenderingModule.dll</HintPath>
+        </Reference>
+        <Reference Include="Unity.TextMeshPro">
+            <HintPath>libs\Unity.TextMeshPro.dll</HintPath>
+        </Reference>
+        <Reference Include="Assembly-CSharp">
+            <HintPath>libs\Assembly-CSharp.dll</HintPath>
+        </Reference>
+        <Reference Include="0Harmony">
+            <HintPath>libs\0Harmony.dll</HintPath>
+        </Reference>
+        <Reference Include="UnityEngine.ImageConversionModule">
+            <HintPath>libs\UnityEngine.ImageConversionModule.dll</HintPath>
+        </Reference>
+        <Reference Include="Hazel">
+            <HintPath>libs\Hazel.dll</HintPath>
+        </Reference>
     </ItemGroup>
-
-    <Target Name="Copy" AfterTargets="Build" Condition="'$(AmongUs)' != '' And '$(Configuration)' != 'Android'">
-        <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(AmongUs)/BepInEx/plugins/" UseSymboliclinksIfPossible="true" />
-    </Target>
 </Project>

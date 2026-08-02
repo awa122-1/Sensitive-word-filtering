@@ -1,120 +1,282 @@
 using System;
+
 using HarmonyLib;
+
 using UnityEngine;
+
 using TMPro;
 
-namespace AmongUsFilterMod
-{
-    // ==========================================
-    // 模块：全员任务监控 + 头顶状态三色动态渲染（活着可见）
-    // ==========================================
+using Il2CppSystem.Collections.Generic;
 
-    // 补丁 1：解除官方任务栏延迟刷新限制，强行实时计算真实数据
-    [HarmonyPatch(typeof(GameData), nameof(GameData.RecomputeTaskProgress))]
-    public static class RealtimeTaskProgressPatch
+
+
+namespace AmongUsFilterMod
+
+{
+
+    [HarmonyPatch(typeof(HudManager), nameof(HudManager.Update))]
+
+    public static class HudManagerUpdateTaskPatch
+
     {
-        [HarmonyPrefix]
-        public static bool Prefix(GameData __instance)
+
+        private static float _lastRefreshTime = 0f;
+
+
+
+        [HarmonyPostfix]
+
+        public static void Postfix(HudManager __instance)
+
         {
+
+            // 确保场上有玩家数据
+
+            if (PlayerControl.AllPlayerControls == null) return;
+
+
+
             int totalTasks = 0;
+
             int completedTasks = 0;
 
-            foreach (var playerInfo in GameData.Instance.AllPlayers)
+            var allPlayers = PlayerControl.AllPlayerControls;
+
+
+
+            // 1. 每帧计算全局进度（带顶级防崩溃保护）
+
+            for (int i = 0; i < allPlayers.Count; i++)
+
             {
-                if (playerInfo == null || playerInfo.Disconnected || playerInfo.Role == null || playerInfo.Role.IsImpostor)
-                {
-                    continue;
-                }
 
-                var tasks = playerInfo.Tasks;
-                if (tasks == null) continue;
+                var playerCtrl = allPlayers[i];
 
-                for (int i = 0; i < tasks.Count; i++)
+                if (playerCtrl == null || playerCtrl.Data == null) continue;
+
+
+
+                try
+
                 {
-                    var task = tasks[i];
-                    totalTasks++;
-                    if (task.TaskComplete)
+
+                    var playerInfo = playerCtrl.Data;
+
+                    if (playerInfo.Disconnected || playerInfo.Role == null || playerInfo.Role.IsImpostor) continue;
+
+
+
+                    List<NetworkedPlayerInfo.TaskInfo> taskList = playerInfo.Tasks;
+
+                    if (taskList == null) continue;
+
+
+
+                    for (int j = 0; j < taskList.Count; j++)
+
                     {
-                        completedTasks++;
+
+                        var task = taskList[j];
+
+                        if (task != null)
+
+                        {
+
+                            totalTasks++;
+
+                            if ((bool)task.Complete) completedTasks++;
+
+                        }
+
                     }
+
                 }
+
+                catch {}
+
             }
 
-            if (totalTasks > 0)
+
+
+            // 更新左上角全局进度条
+
+            if (totalTasks > 0 && GameData.Instance != null)
+
             {
-                GameData.Instance.TotalTasks = totalTasks;
-                GameData.Instance.CompletedTasks = completedTasks;
+
+                try
+
+                {
+
+                    GameData.Instance.TotalTasks = totalTasks;
+
+                    GameData.Instance.CompletedTasks = completedTasks;
+
+                }
+
+                catch {}
+
             }
 
-            return false; // 接管官方逻辑
-        }
-    }
 
-    // 补丁 2：高频驱动刷新，并在每个玩家头顶根据进度动态渲染红、橙、绿三色数字
-    [HarmonyPatch(typeof(HudManager), nameof(HudManager.Update))]
-    public static class HudManagerUpdateTaskPatch
-    {
-        [HarmonyPostfix]
-        public static void Postfix(HudManager __instance)
+
+            // 2. 提高刷新频率（0.2秒一刷），强行覆盖游戏原版渲染
+
+            float curTime = Time.time;
+
+            if (curTime - _lastRefreshTime > 0.2f)
+
+            {
+
+                _lastRefreshTime = curTime;
+
+                for (int i = 0; i < allPlayers.Count; i++)
+
+                {
+
+                    var playerCtrl = allPlayers[i];
+
+                    if (playerCtrl != null)
+
+                    {
+
+                        ForceUpdatePlayerNameText(playerCtrl);
+
+                    }
+
+                }
+
+            }
+
+        }
+
+
+
+        // 🎯 核心改变：不管任务是不是0，不管有没有分配，直接强行刷文本组件！
+
+        private static void ForceUpdatePlayerNameText(PlayerControl playerCtrl)
+
         {
-            if (GameData.Instance == null) return;
 
-            // 1. 强行高频刷新左上角全局进度条
-            if (__instance.TaskBar != null)
+            if (playerCtrl == null || playerCtrl.Data == null) return;
+
+
+
+            try
+
             {
-                GameData.Instance.RecomputeTaskProgress();
-            }
 
-            // 2. 遍历场上所有玩家，动态计算并上色
-            foreach (var player in PlayerControl.AllPlayerControls)
-            {
-                if (player == null || player.nameText == null || player.Data == null) continue;
+                var playerInfo = playerCtrl.Data;
 
-                // 排除内鬼（内鬼不计入正常好人任务变色逻辑）
-                if (player.Data.Role != null && player.Data.Role.IsImpostor)
+                if (playerInfo.Disconnected) return;
+
+
+
+                // 如果是内鬼，我们不显示任务进度
+
+                if (playerInfo.Role != null && playerInfo.Role.IsImpostor) return;
+
+
+
+                int pTotal = 0;
+
+                int pCompleted = 0;
+
+
+
+                // 尝试抓取任务
+
+                List<NetworkedPlayerInfo.TaskInfo> taskList = playerInfo.Tasks;
+
+                if (taskList != null)
+
                 {
-                    continue; 
-                }
 
-                var tasks = player.Data.Tasks;
-                if (tasks == null || tasks.Count == 0) continue;
+                    for (int j = 0; j < taskList.Count; j++)
 
-                int total = 0;
-                int completed = 0;
-
-                for (int i = 0; i < tasks.Count; i++)
-                {
-                    total++;
-                    if (tasks[i].TaskComplete)
                     {
-                        completed++;
+
+                        var task = taskList[j];
+
+                        if (task != null)
+
+                        {
+
+                            pTotal++;
+
+                            if ((bool)task.Complete) pCompleted++;
+
+                        }
+
                     }
+
                 }
 
-                // 拿到玩家原本的名字
-                string originalName = player.Data.PlayerName;
 
-                // 核心：动态颜色判定（使用 TextMeshPro 原生支持的 Hex 颜色标签）
-                string colorHex;
-                if (completed == total)
+
+                // 即使当前任务算出来是 0，我们也强行显示 [0/0] 或者保持原样，而不是直接 return 退出！
+
+                string rawName = playerInfo.PlayerName ?? "Player";
+
+                string colorHex = (pTotal > 0 && pCompleted == pTotal) ? "#00FF00" : ((pCompleted > 0) ? "#FF8C00" : "#FF0000");
+
+                
+
+                // 拼接最终头顶文字
+
+                string finalNameText = pTotal > 0 
+
+                    ? $"{rawName} <color={colorHex}>[{pCompleted}/{pTotal}]</color>"
+
+                    : $"{rawName} <color=#FF0000>[0/0]</color>";
+
+
+
+                // 强制覆写 TMP 文本
+
+                var tmPros = playerCtrl.GetComponentsInChildren<TextMeshPro>(true);
+
+                if (tmPros != null)
+
                 {
-                    // 1. 全部做完 -> 纯绿色
-                    colorHex = "#00FF00";
-                }
-                else if (completed > 0)
-                {
-                    // 2. 做了一部分 -> 橙色
-                    colorHex = "#FF8C00";
-                }
-                else
-                {
-                    // 3. 根本没做 (completed == 0) -> 纯红色
-                    colorHex = "#FF0000";
+
+                    for (int k = 0; k < tmPros.Length; k++)
+
+                    {
+
+                        if (tmPros[k] != null) tmPros[k].text = finalNameText;
+
+                    }
+
                 }
 
-                // 渲染最终带有状态变色后缀的名字标签
-                player.nameText.text = $"{originalName} <color={colorHex}>[{completed}/{total}]</color>";
+
+
+                // 强制覆写 UGUI 文本
+
+                var tmProUguis = playerCtrl.GetComponentsInChildren<TextMeshProUGUI>(true);
+
+                if (tmProUguis != null)
+
+                {
+
+                    for (int k = 0; k < tmProUguis.Length; k++)
+
+                    {
+
+                        if (tmProUguis[k] != null) tmProUguis[k].text = finalNameText;
+
+                    }
+
+                }
+
             }
+
+            catch {}
+
         }
+
     }
-}
+
+} 
+
