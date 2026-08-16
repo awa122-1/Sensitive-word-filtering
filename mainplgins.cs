@@ -15,7 +15,7 @@ namespace AmongUsFilterMod
     public class MyPlugin : BasePlugin
     {
         // 2. 模组基本信息定义
-        public const string Id = "com.paul.amongus.filtermod";
+        public const string Id = "com.tfu.amongus.filtermod";
         public const string Name = "AU_WordFilterMod";
         public const string Version = "1.0.0";
 

@@ -45,5 +45,8 @@
         <Reference Include="Hazel">
             <HintPath>libs\Hazel.dll</HintPath>
         </Reference>
+        <Reference Include="UnityEngine.IMGUIModule">
+    <HintPath>libs\UnityEngine.IMGUIModule.dll</HintPath>
+        </Reference>
     </ItemGroup>
 </Project>

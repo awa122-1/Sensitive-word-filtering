@@ -10,7 +10,7 @@ using Il2CppSystem.Collections.Generic;
 
 
 
-namespace AmongUsFilterMod
+namespace AmongUsFilterMod.TMP
 
 {
 
@@ -279,4 +279,3 @@ namespace AmongUsFilterMod
     }
 
 } 
-
