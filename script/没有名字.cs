@@ -1,37 +1,43 @@
 using System;
+using AmongUsFilterMod.Config;
 using AmongUsFilterMod.Utils;
 using UnityEngine;
 
-namespace AmongUsFilterMod.CustomCursor
+namespace AmongUsFilterMod.CursorCustom
 {
     public static class CursorManager
     {
         public static void SetCursor()
         {
+#if Windows
             try
             {
-                // 调用注册器获取 Texture
-                Texture2D cursorTex = ResourceLoader.GetTexture("Cursor.png");
+                // 加载 Cursor.png
+                Sprite sprite = ResourceLoader.LoadSprite("Cursor.png");
 
-                if (cursorTex == null)
-                {
-                    Debug.LogError("[CursorManager] Cursor.png 注册失败！");
-                    return;
-                }
+                // 如果配置项已开启且 sprite 存在，使用 sprite.texture；否则传入 null 还原系统默认指针
+                Texture2D texture = (ConfigManager.UseModCursor != null && ConfigManager.UseModCursor.Value && sprite != null) 
+                    ? sprite.texture 
+                    : null;
 
-                // 强制应用 Unity 指针
-                UnityEngine.Cursor.SetCursor(
-                    cursorTex,
-                    Vector2.zero, // Hotspot (点击热点坐标：左上角)
+                // 强制应用指针
+                Cursor.SetCursor(
+                    texture,
+                    Vector2.zero,
                     CursorMode.Auto
                 );
-
-                Debug.Log("[CursorManager] 自定义 Cursor 设置成功！");
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[CursorManager] 设置 Cursor 异常: {ex}");
+                Debug.LogError($"[CursorManager] 设置指针异常: {ex}");
+
+                // 发生异常时回滚开关，防止反复出错
+                if (ConfigManager.UseModCursor != null)
+                {
+                    ConfigManager.UseModCursor.Value = false;
+                }
             }
+#endif
         }
     }
 }

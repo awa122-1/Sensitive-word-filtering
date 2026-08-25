@@ -4,6 +4,8 @@
         <LangVersion>latest</LangVersion>
         <DebugType>embedded</DebugType>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+        <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
     </PropertyGroup>
 
     <ItemGroup>
@@ -48,5 +50,9 @@
         <Reference Include="UnityEngine.IMGUIModule">
     <HintPath>libs\UnityEngine.IMGUIModule.dll</HintPath>
         </Reference>
+        <Reference Include="BepInEx">
+    <HintPath>libs\BepInEx.Core.dll</HintPath>
+        </Reference>
+        
     </ItemGroup>
 </Project>

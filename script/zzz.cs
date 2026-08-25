@@ -1,65 +1,30 @@
-using System;
-using AmongUsFilterMod.CustomCursor;
-using AmongUsFilterMod.Utils;
+using AmongUsFilterMod.Config;
+using BepInEx;
+using BepInEx.IL2CPP;
 using HarmonyLib;
-using UnityEngine;
+using BepInEx.Unity.IL2CPP;
 
-namespace AmongUsFilterMod.ModStampPatch
+namespace AmongUsFilterMod
 {
-    [HarmonyPatch(typeof(ModManager))]
-    public static class ModManagerPatch
+    [BepInPlugin(PluginGuid, PluginName, PluginVersion)]
+    [BepInProcess("Among Us.exe")]
+    public class ModMain : BasePlugin
     {
-        [HarmonyPatch(nameof(ModManager.ShowModStamp))]
-        [HarmonyPostfix]
-        public static void ShowModStamp_Postfix()
+        public const string PluginGuid = "com.tfu.amongusfiltermod";
+        public const string PluginName = "AmongUsFilterMod";
+        public const string PluginVersion = "1.0.0";
+
+        public Harmony Harmony { get; } = new Harmony(PluginGuid);
+
+        public override void Load()
         {
-            try
-            {
-                // 1. 触发光标设置
-                CursorManager.SetCursor();
+            // 1. 初始化 Config 选项
+            ConfigManager.Init(Config);
 
-                // 2. 查找并替换 ModStamp 贴图
-                GameObject modStamp = GameObject.Find("ModStamp");
+            // 2. 挂载所有 Patch (ModManager.LateUpdate 等)
+            Harmony.PatchAll();
 
-                if (modStamp == null)
-                {
-                    // 容错搜索：遍历当前场景
-                    foreach (GameObject rootObj in UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects())
-                    {
-                        Transform found = rootObj.transform.Find("ModStamp");
-                        if (found != null)
-                        {
-                            modStamp = found.gameObject;
-                            break;
-                        }
-                    }
-                }
-
-                if (modStamp == null)
-                {
-                    Debug.LogWarning("[ModStampPatch] 场景中未找到 ModStamp GameObject");
-                    return;
-                }
-
-                // 调整大小与贴图
-                modStamp.transform.localScale = new Vector3(0.3f, 0.3f, 0.3f);
-
-                SpriteRenderer renderer = modStamp.GetComponent<SpriteRenderer>();
-                if (renderer != null)
-                {
-                    // 从注册管理器加载资源
-                    Sprite newStamp = ResourceLoader.GetSprite("hi_qwq_ms.png", 100f);
-                    if (newStamp != null)
-                    {
-                        renderer.sprite = newStamp;
-                        Debug.Log("[ModStampPatch] ModStamp 贴图替换成功！");
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.LogError($"[ModStampPatch] Patch 过程出现异常: {ex}");
-            }
+            Log.LogInfo($"{PluginName} v{PluginVersion} 成功装载并应用 Patch！");
         }
     }
 }
