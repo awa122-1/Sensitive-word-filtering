@@ -53,6 +53,17 @@
         <Reference Include="BepInEx">
     <HintPath>libs\BepInEx.Core.dll</HintPath>
         </Reference>
+  <!-- 引入游戏原生的音频与网络模块 -->
+        <Reference Include="UnityEngine.AudioModule">
+    <HintPath>libs\UnityEngine.AudioModule.dll</HintPath>
+        </Reference>
+         <Reference Include="UnityEngine.UnityWebRequestModule">
+    <HintPath>libs\UnityEngine.UnityWebRequestModule.dll</HintPath>
+        </Reference>
+         <Reference Include="UnityEngine.UnityWebRequestAudioModule">
+    <HintPath>libs\UnityEngine.UnityWebRequestAudioModule.dll</HintPath>
+        </Reference>
+
         
     </ItemGroup>
 </Project>

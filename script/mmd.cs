@@ -1,82 +1,63 @@
-using AmongUsFilterMod.CursorCustom;
-using AmongUsFilterMod.Utils;
+using System;
+using System.IO;
 using HarmonyLib;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
-namespace AmongUsFilterMod.Patches
+namespace AmongUsFilterMod
 {
-    [HarmonyPatch(typeof(ModManager), nameof(ModManager.LateUpdate))]
-    internal class ModManagerLateUpdatePatch
+    [HarmonyPatch(typeof(MainMenuManager), nameof(MainMenuManager.Start))]
+    public static class SafeWatermarkPatch
     {
-        private static bool _firstRun = true;
-        private static string _lastScene = "";
-        private static Sprite _cachedStampSprite;
+        private static bool _hasRun = false;
 
-        [HarmonyPrefix]
-        public static void Prefix(ModManager __instance)
+        [HarmonyPostfix]
+        public static void Postfix()
         {
-            // 1. 触发原版 ShowModStamp
-            __instance.ShowModStamp();
+            if (_hasRun) return;
+            _hasRun = true;
 
-            if (!_firstRun)
+            try
             {
-                // 场景切换逻辑判定
-                string currentScene = SceneManager.GetActiveScene().name;
-                if (_lastScene != currentScene)
+                // 定位至 Among Us.exe 根目录下的 tfumgcgl_data/Images/hi_qwq_ms.png
+                string gameRootDir = Directory.GetCurrentDirectory();
+                string imgPath = Path.Combine(gameRootDir, "tfumgcgl_data", "Images", "hi_qwq_ms.png");
+
+                if (!File.Exists(imgPath))
                 {
-                    var last = _lastScene;
-                    _lastScene = currentScene;
+                    MyPlugin.Log?.LogWarning($"[水印] 没找到图片，请检查路径: {imgPath}");
+                    return;
+                }
 
-                    // 切换场景时再次尝试补全光标
-                    CursorManager.SetCursor();
+                byte[] imgBytes = File.ReadAllBytes(imgPath);
+                Texture2D tex = new Texture2D(2, 2);
 
-                    if (last != "SplashIntro")
+                if (ImageConversion.LoadImage(tex, imgBytes))
+                {
+                    Sprite customSprite = Sprite.Create(
+                        tex, 
+                        new Rect(0, 0, tex.width, tex.height), 
+                        new Vector2(0.5f, 0.5f), 
+                        100f
+                    );
+
+                    ModManager modManager = ModManager.Instance;
+                    if (modManager != null && modManager.ModStamp != null)
                     {
-                        OnSceneChange(_lastScene);
+                        modManager.ModStamp.sprite = customSprite;
+                        modManager.ModStamp.enabled = true;
+
+                        // 缩放大小设置
+                        float targetScale = 0.125f; 
+                        modManager.ModStamp.transform.localScale = new Vector3(targetScale, targetScale, 1f);
+
+                        MyPlugin.Log?.LogInfo("[水印] 替换并调整大小成功！");
                     }
                 }
             }
-            else
+            catch (Exception ex)
             {
-                // 2. 首次运行：加载自定义 ModStamp.png 贴图并替换
-                if (_cachedStampSprite == null)
-                {
-                    _cachedStampSprite = ResourceLoader.LoadSprite("ModStamp.png", 100f);
-                }
-
-                if (_cachedStampSprite != null && __instance.ModStamp != null)
-                {
-                    __instance.ModStamp.sprite = _cachedStampSprite;
-                }
-
-                // 3. 应用鼠标指针
-                CursorManager.SetCursor();
-                _firstRun = false;
+                MyPlugin.Log?.LogError($"[水印] 异常已截获: {ex.Message}");
             }
-        }
-
-        [HarmonyPostfix]
-        public static void Postfix(ModManager __instance)
-        {
-            if (__instance == null || __instance.ModStamp == null || __instance.localCamera == null)
-                return;
-
-            // 4. 精确计算并保持 ModStamp 处于屏幕右上角位置
-            var offset_y = HudManager.InstanceExists ? 1.6f : 0.9f;
-            __instance.ModStamp.transform.position = AspectPosition.ComputeWorldPosition(
-                __instance.localCamera,
-                AspectPosition.EdgeAlignments.RightTop,
-                new Vector3(0.4f, offset_y, __instance.localCamera.nearClipPlane + 0.1f)
-            );
-
-            // 设置显示缩放
-            __instance.ModStamp.transform.localScale = new Vector3(0.3f, 0.3f, 0.3f);
-        }
-
-        private static void OnSceneChange(string newSceneName)
-        {
-            Debug.Log($"[ModManagerPatch] 切换场景至: {newSceneName}");
         }
     }
 }
